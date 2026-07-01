@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Travel Packing Checklist</title>
+<title>Travel Packing Checklist (Offline)</title>
 <style>
 :root{
   --paper:#FAF6EF;
@@ -61,14 +61,14 @@ body{
 .import-message.error{ color:var(--accent); }
 .import-message.success{ color:var(--stamp); }
 
-.offline-note{
+.storage-note{
   display:inline-block;
   margin-top:10px;
   font-family:var(--mono);
   font-size:.72rem;
   letter-spacing:.02em;
-  color:var(--accent);
-  background:#F7E9E3;
+  color:var(--ink-soft);
+  background:var(--paper-alt);
   padding:5px 10px;
   border-radius:999px;
 }
@@ -288,7 +288,7 @@ button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outl
       <span class="save-status" id="save-status"></span>
     </div>
     <div class="import-feedback" id="import-feedback"></div>
-    <span class="offline-note hidden" id="offline-note">Autosave isn't available in this window — changes will reset on reload. Use Export to keep a backup.</span>
+    <span class="storage-note" id="storage-note">Saved in this browser only — use Export to back up or move to another device.</span>
   </header>
 
   <nav class="tabs" id="tabs" role="tablist" aria-label="Trip type"></nav>
@@ -1073,7 +1073,6 @@ const DEFAULT_DATA = {
 const TAB_ORDER = ['city','hike','camp'];
 const TAB_ICON = { city:'\u2708\uFE0F', hike:'\uD83E\uDD7E', camp:'\uD83C\uDFD5\uFE0F' };
 const STORAGE_KEY = 'packing-checklist-data-v2';
-const LEGACY_CHECKED_KEY = 'packing-checklist-checked-v1';
 
 let DATA = null;
 let activeTab = TAB_ORDER[0];
@@ -1084,30 +1083,6 @@ let pendingImportData = null;
 let idCounter = 0;
 let saveDebounceTimer = null;
 let saveStatusTimer = null;
-
-let storageAvailable = false;
-
-// window.storage is injected by the host page into this iframe. That
-// injection can happen a beat after our script starts running, so a single
-// synchronous check at load time can wrongly conclude storage is missing.
-// Poll briefly for it instead of judging on the very first instant.
-function waitForStorage(timeoutMs){
-  return new Promise((resolve) => {
-    const step = 100;
-    let waited = 0;
-    if(window.storage){ resolve(true); return; }
-    const timer = setInterval(() => {
-      waited += step;
-      if(window.storage){
-        clearInterval(timer);
-        resolve(true);
-      } else if(waited >= timeoutMs){
-        clearInterval(timer);
-        resolve(!!window.storage);
-      }
-    }, step);
-  });
-}
 
 function genId(){
   idCounter += 1;
@@ -1153,33 +1128,17 @@ function normalizeData(raw){
   return out;
 }
 
-async function loadInitialData(){
-  if(storageAvailable){
-    try{
-      const res = await window.storage.get(STORAGE_KEY, false);
-      if(res && typeof res.value === 'string'){
-        const parsed = JSON.parse(res.value);
-        const normalized = normalizeData(parsed);
-        if(normalized) return normalized;
-      }
-    }catch(err){ /* key not present yet, fall through */ }
-
-    try{
-      const legacy = await window.storage.get(LEGACY_CHECKED_KEY, false);
-      if(legacy && typeof legacy.value === 'string'){
-        const legacyChecked = JSON.parse(legacy.value);
-        const seeded = cloneDefault();
-        TAB_ORDER.forEach(tabKey => {
-          seeded[tabKey].sections.forEach(sec => {
-            sec.items.forEach(item => {
-              if(legacyChecked[item.id]) item.checked = true;
-            });
-          });
-        });
-        return seeded;
-      }
-    }catch(err){ /* no legacy data either */ }
-  }
+// Plain browser localStorage — synchronous, no bridge, no waiting on
+// anything. This works because the file is meant to be opened directly
+// in a browser, not previewed inside a sandboxed frame.
+function loadInitialData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const normalized = normalizeData(JSON.parse(raw));
+      if(normalized) return normalized;
+    }
+  }catch(err){ /* corrupted value, or storage blocked — fall back to defaults */ }
   return cloneDefault();
 }
 
@@ -1193,14 +1152,13 @@ function showSaveStatus(text, holdMs, isError){
   saveStatusTimer = setTimeout(() => { el.classList.remove('visible'); }, holdMs);
 }
 
-async function persist(silent){
-  if(!storageAvailable) return;
+function persist(silent){
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(DATA), false);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
     if(!silent) showSaveStatus('Saved', 1200, false);
   }catch(err){
     console.error('checklist: could not save', err);
-    if(!silent) showSaveStatus('Could not save', 2500, true);
+    if(!silent) showSaveStatus('Could not save — your browser may be blocking local storage', 3200, true);
   }
 }
 
@@ -1320,16 +1278,12 @@ function renderClearControl(){
   }
 }
 
-async function handleManualSave(){
+function handleManualSave(){
   if(saveDebounceTimer){
     clearTimeout(saveDebounceTimer);
     saveDebounceTimer = null;
   }
-  if(!storageAvailable){
-    showSaveStatus("Can't save here — try Export instead", 3000, true);
-    return;
-  }
-  await persist();
+  persist();
 }
 
 function exportData(){
@@ -1573,21 +1527,11 @@ document.getElementById('import-file-input').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-// Paint the checklist immediately using the built-in defaults — no waiting
-// on storage at all. Whatever was actually saved loads in just after and
-// swaps in seamlessly, instead of holding up the first render.
-DATA = cloneDefault();
+// localStorage is synchronous, so the real saved state (if any) is ready
+// before the very first paint — no defaults-then-swap needed here.
+DATA = loadInitialData();
 renderAll();
-
-(async function hydrate(){
-  storageAvailable = await waitForStorage(1500);
-  DATA = await loadInitialData();
-  renderAll();
-  await persist(true);
-  if(!storageAvailable){
-    document.getElementById('offline-note').classList.remove('hidden');
-  }
-})();
+persist(true);
 </script>
 </body>
 </html>
