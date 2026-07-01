@@ -37,6 +37,30 @@ body{
   letter-spacing:-.01em;
 }
 .top p{ margin:0; color:var(--ink-soft); font-size:.95rem; }
+
+.header-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+.save-status{
+  font-family:var(--mono);
+  font-size:.72rem;
+  color:var(--stamp);
+  opacity:0;
+  transition:opacity .25s ease;
+}
+.save-status.visible{ opacity:1; }
+.save-status.error{ color:var(--accent); }
+
+.import-feedback{ margin-top:10px; }
+.import-feedback:empty{ display:none; }
+.import-message{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  font-size:.82rem;
+  padding:8px 12px;
+  border-radius:8px;
+  background:var(--paper-alt);
+}
+.import-message.error{ color:var(--accent); }
+.import-message.success{ color:var(--stamp); }
+
 .offline-note{
   display:inline-block;
   margin-top:10px;
@@ -116,27 +140,15 @@ button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outl
 .progress-fill{ height:100%; background:var(--stamp); width:0%; transition:width .25s ease; }
 .progress-label{ font-family:var(--mono); font-size:.78rem; color:var(--ink-soft); white-space:nowrap; }
 
-.edit-toolbar{
-  display:none;
-  flex-wrap:wrap;
-  gap:10px;
-  align-items:center;
-  margin:14px 0 4px;
-  padding:10px 12px;
-  background:var(--paper-alt);
-  border:1px solid var(--line);
-  border-radius:10px;
-}
-.edit-toolbar.active{ display:flex; }
-.edit-hint{ font-size:.78rem; color:var(--ink-soft); font-style:italic; }
-.import-message{
-  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+.edit-hint{
   font-size:.82rem;
-  padding:6px 0 0;
-  width:100%;
+  color:var(--ink-soft);
+  font-style:italic;
+  margin:14px 0 4px;
+  padding:8px 12px;
+  background:var(--paper-alt);
+  border-radius:8px;
 }
-.import-message.error{ color:var(--accent); }
-.import-message.success{ color:var(--stamp); }
 
 .section-heading{
   font-family:var(--mono);
@@ -277,7 +289,13 @@ button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outl
   <header class="top">
     <h1>Packing Checklist</h1>
     <p>Pick a trip type below, then tap items off as you pack them — or hit Edit to add, rename, and remove items.</p>
-    <span class="offline-note hidden" id="offline-note">Autosave isn't available here — changes will reset on reload.</span>
+    <div class="header-actions">
+      <button type="button" class="btn-ghost" id="export-btn">Export JSON</button>
+      <button type="button" class="btn-ghost" id="import-btn">Import JSON</button>
+      <span class="save-status" id="save-status"></span>
+    </div>
+    <div class="import-feedback" id="import-feedback"></div>
+    <span class="offline-note hidden" id="offline-note">Autosave isn't available in this window — changes will reset on reload. Use Export to keep a backup.</span>
   </header>
 
   <p class="loading-msg" id="loading-msg">Loading your checklist…</p>
@@ -296,12 +314,12 @@ button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outl
       </div>
     </div>
 
-    <div class="edit-toolbar" id="edit-toolbar"></div>
-
     <div class="progress-row">
       <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
       <span class="progress-label" id="progress-label"></span>
     </div>
+
+    <p class="edit-hint hidden" id="edit-hint">Type to rename an item, tap &#215; to remove it, or add a new one below a list.</p>
 
     <div id="sections"></div>
   </section>
@@ -1073,8 +1091,32 @@ let confirmingClear = false;
 let importMessage = null;
 let pendingImportData = null;
 let idCounter = 0;
+let saveDebounceTimer = null;
+let saveStatusTimer = null;
 
-const storageAvailable = (typeof window !== 'undefined') && !!window.storage;
+let storageAvailable = false;
+
+// window.storage is injected by the host page into this iframe. That
+// injection can happen a beat after our script starts running, so a single
+// synchronous check at load time can wrongly conclude storage is missing.
+// Poll briefly for it instead of judging on the very first instant.
+function waitForStorage(timeoutMs){
+  return new Promise((resolve) => {
+    const step = 100;
+    let waited = 0;
+    if(window.storage){ resolve(true); return; }
+    const timer = setInterval(() => {
+      waited += step;
+      if(window.storage){
+        clearInterval(timer);
+        resolve(true);
+      } else if(waited >= timeoutMs){
+        clearInterval(timer);
+        resolve(!!window.storage);
+      }
+    }, step);
+  });
+}
 
 function genId(){
   idCounter += 1;
@@ -1150,13 +1192,41 @@ async function loadInitialData(){
   return cloneDefault();
 }
 
-async function persist(){
+function showSaveStatus(text, holdMs, isError){
+  const el = document.getElementById('save-status');
+  if(!el) return;
+  el.textContent = text;
+  el.classList.toggle('error', !!isError);
+  el.classList.add('visible');
+  if(saveStatusTimer) clearTimeout(saveStatusTimer);
+  saveStatusTimer = setTimeout(() => { el.classList.remove('visible'); }, holdMs);
+}
+
+async function persist(silent){
   if(!storageAvailable) return;
   try{
     await window.storage.set(STORAGE_KEY, JSON.stringify(DATA), false);
+    if(!silent) showSaveStatus('Saved', 1200, false);
   }catch(err){
     console.error('checklist: could not save', err);
+    if(!silent) showSaveStatus('Could not save', 2500, true);
   }
+}
+
+function scheduleSave(){
+  if(saveDebounceTimer) clearTimeout(saveDebounceTimer);
+  saveDebounceTimer = setTimeout(() => {
+    saveDebounceTimer = null;
+    persist();
+  }, 400);
+}
+
+async function flushSave(){
+  if(saveDebounceTimer){
+    clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = null;
+  }
+  await persist();
 }
 
 function counts(tabKey){
@@ -1222,8 +1292,6 @@ function renderEditToggle(){
   btn.addEventListener('click', () => {
     editMode = !editMode;
     confirmingClear = false;
-    importMessage = null;
-    pendingImportData = null;
     renderAll();
   });
   wrap.appendChild(btn);
@@ -1275,6 +1343,28 @@ function exportData(){
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function renderImportFeedback(){
+  const box = document.getElementById('import-feedback');
+  box.innerHTML = '';
+  if(!importMessage) return;
+  const msgRow = document.createElement('div');
+  msgRow.className = 'import-message ' + importMessage.type;
+  const msgText = document.createElement('span');
+  msgText.textContent = importMessage.text;
+  msgRow.appendChild(msgText);
+  if(importMessage.type === 'confirm'){
+    const yes = document.createElement('button');
+    yes.type = 'button'; yes.className = 'btn-danger'; yes.textContent = 'Yes, replace';
+    yes.addEventListener('click', applyPendingImport);
+    const no = document.createElement('button');
+    no.type = 'button'; no.className = 'btn-ghost'; no.textContent = 'Cancel';
+    no.addEventListener('click', () => { importMessage = null; pendingImportData = null; renderImportFeedback(); });
+    msgRow.appendChild(yes);
+    msgRow.appendChild(no);
+  }
+  box.appendChild(msgRow);
+}
+
 function handleImportFile(file){
   const reader = new FileReader();
   reader.onload = (ev) => {
@@ -1284,23 +1374,23 @@ function handleImportFile(file){
     }catch(err){
       importMessage = { type:'error', text:"That file isn't valid JSON." };
       pendingImportData = null;
-      renderEditToolbar();
+      renderImportFeedback();
       return;
     }
     const normalized = normalizeData(parsed);
     if(!normalized){
       importMessage = { type:'error', text:"That file doesn't match the checklist format." };
       pendingImportData = null;
-      renderEditToolbar();
+      renderImportFeedback();
       return;
     }
     pendingImportData = normalized;
     importMessage = { type:'confirm', text:'Replace all your current lists with this file?' };
-    renderEditToolbar();
+    renderImportFeedback();
   };
   reader.onerror = () => {
     importMessage = { type:'error', text:'Could not read that file.' };
-    renderEditToolbar();
+    renderImportFeedback();
   };
   reader.readAsText(file);
 }
@@ -1310,55 +1400,14 @@ async function applyPendingImport(){
   DATA = pendingImportData;
   pendingImportData = null;
   importMessage = { type:'success', text:'Checklist imported.' };
-  await persist();
+  await persist(true);
   if(!TAB_ORDER.includes(activeTab)) activeTab = TAB_ORDER[0];
   renderAll();
+  renderImportFeedback();
   setTimeout(() => {
     importMessage = null;
-    renderEditToolbar();
+    renderImportFeedback();
   }, 2500);
-}
-
-function renderEditToolbar(){
-  const bar = document.getElementById('edit-toolbar');
-  bar.innerHTML = '';
-  bar.classList.toggle('active', editMode);
-  if(!editMode) return;
-
-  const exportBtn = document.createElement('button');
-  exportBtn.type = 'button'; exportBtn.className = 'btn-ghost'; exportBtn.textContent = 'Export JSON';
-  exportBtn.addEventListener('click', exportData);
-
-  const importBtn = document.createElement('button');
-  importBtn.type = 'button'; importBtn.className = 'btn-ghost'; importBtn.textContent = 'Import JSON';
-  importBtn.addEventListener('click', () => document.getElementById('import-file-input').click());
-
-  const hint = document.createElement('span');
-  hint.className = 'edit-hint';
-  hint.textContent = 'Type to rename an item, tap \u00D7 to remove it, or add a new one below a list.';
-
-  bar.appendChild(exportBtn);
-  bar.appendChild(importBtn);
-  bar.appendChild(hint);
-
-  if(importMessage){
-    const msgRow = document.createElement('div');
-    msgRow.className = 'import-message ' + importMessage.type;
-    const msgText = document.createElement('span');
-    msgText.textContent = importMessage.text;
-    msgRow.appendChild(msgText);
-    if(importMessage.type === 'confirm'){
-      const yes = document.createElement('button');
-      yes.type = 'button'; yes.className = 'btn-danger'; yes.textContent = 'Yes, replace';
-      yes.addEventListener('click', applyPendingImport);
-      const no = document.createElement('button');
-      no.type = 'button'; no.className = 'btn-ghost'; no.textContent = 'Cancel';
-      no.addEventListener('click', () => { importMessage = null; pendingImportData = null; renderEditToolbar(); });
-      msgRow.appendChild(yes);
-      msgRow.appendChild(no);
-    }
-    bar.appendChild(msgRow);
-  }
 }
 
 function buildViewRow(item){
@@ -1397,22 +1446,31 @@ function buildEditRow(tabKey, sIdx, item){
   const row = document.createElement('div');
   row.className = 'item-edit-row';
 
+  const originalText = item.text;
+
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'item-edit-input';
   input.value = item.text;
   input.setAttribute('aria-label', 'Edit item text');
 
-  const commit = async () => {
+  input.addEventListener('input', () => {
+    item.text = input.value;
+    scheduleSave();
+  });
+
+  input.addEventListener('blur', async () => {
     const v = input.value.trim();
-    if(v && v !== item.text){
+    if(v){
       item.text = v;
-      await persist();
+      input.value = v;
     } else {
-      input.value = item.text;
+      item.text = originalText;
+      input.value = originalText;
     }
-  };
-  input.addEventListener('blur', commit);
+    await flushSave();
+  });
+
   input.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); input.blur(); } });
 
   const del = document.createElement('button');
@@ -1475,7 +1533,7 @@ function renderPanel(){
   renderProgress();
   renderEditToggle();
   renderClearControl();
-  renderEditToolbar();
+  document.getElementById('edit-hint').classList.toggle('hidden', !editMode);
 
   const container = document.getElementById('sections');
   container.innerHTML = '';
@@ -1503,6 +1561,8 @@ function renderAll(){
   renderPanel();
 }
 
+document.getElementById('export-btn').addEventListener('click', exportData);
+document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file-input').click());
 document.getElementById('import-file-input').addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if(file) handleImportFile(file);
@@ -1510,8 +1570,9 @@ document.getElementById('import-file-input').addEventListener('change', (e) => {
 });
 
 (async function init(){
+  storageAvailable = await waitForStorage(1500);
   DATA = await loadInitialData();
-  await persist();
+  await persist(true);
   if(!storageAvailable){
     document.getElementById('offline-note').classList.remove('hidden');
   }
