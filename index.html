@@ -73,14 +73,6 @@ body{
   border-radius:999px;
 }
 
-.loading-msg{
-  font-family:var(--mono);
-  color:var(--ink-soft);
-  font-size:.85rem;
-  padding:34px 0;
-  text-align:center;
-}
-
 .tabs{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:0; }
 .tab-btn{
   display:flex; align-items:center; gap:8px;
@@ -290,6 +282,7 @@ button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outl
     <h1>Packing Checklist</h1>
     <p>Pick a trip type below, then tap items off as you pack them — or hit Edit to add, rename, and remove items.</p>
     <div class="header-actions">
+      <button type="button" class="btn-ghost" id="save-btn">Save</button>
       <button type="button" class="btn-ghost" id="export-btn">Export JSON</button>
       <button type="button" class="btn-ghost" id="import-btn">Import JSON</button>
       <span class="save-status" id="save-status"></span>
@@ -298,11 +291,9 @@ button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outl
     <span class="offline-note hidden" id="offline-note">Autosave isn't available in this window — changes will reset on reload. Use Export to keep a backup.</span>
   </header>
 
-  <p class="loading-msg" id="loading-msg">Loading your checklist…</p>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Trip type"></nav>
 
-  <nav class="tabs hidden" id="tabs" role="tablist" aria-label="Trip type"></nav>
-
-  <section class="panel hidden" id="panel">
+  <section class="panel" id="panel">
     <div class="panel-head">
       <div>
         <h2 id="panel-title"></h2>
@@ -1329,6 +1320,18 @@ function renderClearControl(){
   }
 }
 
+async function handleManualSave(){
+  if(saveDebounceTimer){
+    clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = null;
+  }
+  if(!storageAvailable){
+    showSaveStatus("Can't save here — try Export instead", 3000, true);
+    return;
+  }
+  await persist();
+}
+
 function exportData(){
   const payload = JSON.stringify(DATA, null, 2);
   const blob = new Blob([payload], { type: 'application/json' });
@@ -1561,6 +1564,7 @@ function renderAll(){
   renderPanel();
 }
 
+document.getElementById('save-btn').addEventListener('click', handleManualSave);
 document.getElementById('export-btn').addEventListener('click', exportData);
 document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file-input').click());
 document.getElementById('import-file-input').addEventListener('change', (e) => {
@@ -1569,17 +1573,20 @@ document.getElementById('import-file-input').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-(async function init(){
+// Paint the checklist immediately using the built-in defaults — no waiting
+// on storage at all. Whatever was actually saved loads in just after and
+// swaps in seamlessly, instead of holding up the first render.
+DATA = cloneDefault();
+renderAll();
+
+(async function hydrate(){
   storageAvailable = await waitForStorage(1500);
   DATA = await loadInitialData();
+  renderAll();
   await persist(true);
   if(!storageAvailable){
     document.getElementById('offline-note').classList.remove('hidden');
   }
-  document.getElementById('loading-msg').classList.add('hidden');
-  document.getElementById('tabs').classList.remove('hidden');
-  document.getElementById('panel').classList.remove('hidden');
-  renderAll();
 })();
 </script>
 </body>
