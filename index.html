@@ -26,6 +26,7 @@ body{
   font-family:var(--sans);
   -webkit-font-smoothing:antialiased;
 }
+.hidden{ display:none !important; }
 .app{ max-width:880px; margin:0 auto; padding:32px 20px 90px; }
 
 .top{ border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:22px; }
@@ -37,7 +38,7 @@ body{
 }
 .top p{ margin:0; color:var(--ink-soft); font-size:.95rem; }
 .offline-note{
-  display:none;
+  display:inline-block;
   margin-top:10px;
   font-family:var(--mono);
   font-size:.72rem;
@@ -46,6 +47,14 @@ body{
   background:#F7E9E3;
   padding:5px 10px;
   border-radius:999px;
+}
+
+.loading-msg{
+  font-family:var(--mono);
+  color:var(--ink-soft);
+  font-size:.85rem;
+  padding:34px 0;
+  text-align:center;
 }
 
 .tabs{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:0; }
@@ -75,7 +84,6 @@ body{
   border-bottom:3px solid var(--accent);
 }
 .tab-btn:not(.active):hover{ background:#EAE1CB; }
-.tab-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 
 .panel{ border-top:3px solid var(--ink); padding-top:20px; }
 .panel-head{
@@ -84,6 +92,7 @@ body{
 .panel-head h2{ font-family:var(--serif); font-size:1.4rem; margin:0 0 2px; }
 .panel-head .subtitle{ margin:0; color:var(--ink-soft); font-size:.88rem; font-style:italic; }
 
+.controls-wrap{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .clear-wrap{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .btn-ghost{
   font-family:var(--sans); font-size:.82rem; font-weight:600;
@@ -91,6 +100,8 @@ body{
   padding:7px 12px; border-radius:8px; cursor:pointer;
 }
 .btn-ghost:hover{ border-color:var(--accent); color:var(--accent); }
+.btn-ghost.active-edit{ background:var(--ink); border-color:var(--ink); color:#fff; }
+.btn-ghost.active-edit:hover{ border-color:var(--ink); color:#fff; opacity:.9; }
 .btn-danger{
   font-family:var(--sans); font-size:.82rem; font-weight:600;
   background:var(--accent); border:1px solid var(--accent); color:#fff;
@@ -98,10 +109,34 @@ body{
 }
 .btn-danger:hover{ opacity:.9; }
 
+button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
 .progress-row{ display:flex; align-items:center; gap:12px; margin:16px 0 6px; }
 .progress-track{ flex:1; height:8px; background:var(--paper-alt); border:1px solid var(--line); border-radius:99px; overflow:hidden; }
 .progress-fill{ height:100%; background:var(--stamp); width:0%; transition:width .25s ease; }
 .progress-label{ font-family:var(--mono); font-size:.78rem; color:var(--ink-soft); white-space:nowrap; }
+
+.edit-toolbar{
+  display:none;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  margin:14px 0 4px;
+  padding:10px 12px;
+  background:var(--paper-alt);
+  border:1px solid var(--line);
+  border-radius:10px;
+}
+.edit-toolbar.active{ display:flex; }
+.edit-hint{ font-size:.78rem; color:var(--ink-soft); font-style:italic; }
+.import-message{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  font-size:.82rem;
+  padding:6px 0 0;
+  width:100%;
+}
+.import-message.error{ color:var(--accent); }
+.import-message.success{ color:var(--stamp); }
 
 .section-heading{
   font-family:var(--mono);
@@ -168,15 +203,66 @@ body{
   opacity:1;
   transform:scale(1) rotate(-8deg);
 }
-.label{
-  font-size:.94rem;
-  line-height:1.35;
-}
+.label{ font-size:.94rem; line-height:1.35; }
 .real-checkbox:checked ~ .label{
   color:var(--ink-soft);
   text-decoration:line-through;
   text-decoration-color:#C9BFA8;
 }
+
+.item-edit-row{ display:flex; align-items:center; gap:8px; padding:4px 2px; }
+.item-edit-input{
+  flex:1;
+  font-family:var(--sans);
+  font-size:.9rem;
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  background:#fff;
+  color:var(--ink);
+  min-width:0;
+}
+.item-delete-btn{
+  flex:0 0 auto;
+  width:26px; height:26px;
+  border-radius:50%;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--ink-soft);
+  font-size:15px;
+  line-height:1;
+  cursor:pointer;
+}
+.item-delete-btn:hover{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+.item-add-row{
+  display:flex; align-items:center; gap:8px;
+  padding:8px 2px 4px;
+  grid-column:1 / -1;
+}
+.item-add-input{
+  flex:1;
+  font-family:var(--sans);
+  font-size:.9rem;
+  padding:7px 9px;
+  border:1px dashed #B9AF9C;
+  border-radius:7px;
+  background:transparent;
+  color:var(--ink);
+  min-width:0;
+}
+.item-add-input:focus{ border-style:solid; background:#fff; }
+.item-add-btn{
+  flex:0 0 auto;
+  font-family:var(--sans); font-size:.82rem; font-weight:600;
+  padding:7px 14px;
+  border-radius:7px;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--ink-soft);
+  cursor:pointer;
+}
+.item-add-btn:hover{ border-color:var(--stamp); color:var(--stamp); }
 
 @media (max-width:520px){
   .top h1{ font-size:1.6rem; }
@@ -190,20 +276,27 @@ body{
 <div class="app">
   <header class="top">
     <h1>Packing Checklist</h1>
-    <p>Pick a trip type below, then tap items off as you pack them.</p>
-    <span class="offline-note" id="offline-note">Autosave isn't available here — checks will reset on reload.</span>
+    <p>Pick a trip type below, then tap items off as you pack them — or hit Edit to add, rename, and remove items.</p>
+    <span class="offline-note hidden" id="offline-note">Autosave isn't available here — changes will reset on reload.</span>
   </header>
 
-  <nav class="tabs" id="tabs" role="tablist" aria-label="Trip type"></nav>
+  <p class="loading-msg" id="loading-msg">Loading your checklist…</p>
 
-  <section class="panel">
+  <nav class="tabs hidden" id="tabs" role="tablist" aria-label="Trip type"></nav>
+
+  <section class="panel hidden" id="panel">
     <div class="panel-head">
       <div>
         <h2 id="panel-title"></h2>
         <p class="subtitle" id="panel-subtitle"></p>
       </div>
-      <div class="clear-wrap" id="clear-wrap"></div>
+      <div class="controls-wrap">
+        <div id="edit-toggle-wrap"></div>
+        <div class="clear-wrap" id="clear-wrap"></div>
+      </div>
     </div>
+
+    <div class="edit-toolbar" id="edit-toolbar"></div>
 
     <div class="progress-row">
       <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
@@ -212,10 +305,12 @@ body{
 
     <div id="sections"></div>
   </section>
+
+  <input type="file" id="import-file-input" accept="application/json,.json" class="hidden">
 </div>
 
 <script>
-const DATA = {
+const DEFAULT_DATA = {
   "city": {
     "label": "City Trip",
     "subtitle": "Short city visits by flight",
@@ -223,35 +318,151 @@ const DATA = {
       {
         "heading": null,
         "items": [
-          "Passport",
-          "Driving License + International",
-          "Sunglasses",
-          "Small towel fast drying",
-          "Toothbrush",
-          "Sun screen",
-          "Cap (baseball cap)",
-          "Walking socks",
-          "Woolen tights",
-          "Underwear | Boxer",
-          "Travel bag (side bag)",
-          "Bus card",
-          "Camera battery",
-          "Keys",
-          "SD card",
-          "Bankpas / Credit card",
-          "Phone charger",
-          "Emergency numbers",
-          "Shin Ramen + Pickled veggies.",
-          "Diaper",
-          "Baby’s: | Vaseline | Paracetamol | Gloves and Hat | Diaper | Maize finger | Otrijven | Vitamin D",
-          "Baby’s: Sudo cream | Sunscreen | Nose spray | Paracetamol | Swimming pants | Floaters | Hat",
-          "Binocular",
-          "Swimming pants",
-          "Camera Bag",
-          "Extra Socks",
-          "Cold bag (red)",
-          "Phone Charger",
-          "Band aid blisters"
+          {
+            "id": "city-0-0",
+            "text": "Passport",
+            "checked": false
+          },
+          {
+            "id": "city-0-1",
+            "text": "Driving License + International",
+            "checked": false
+          },
+          {
+            "id": "city-0-2",
+            "text": "Sunglasses",
+            "checked": false
+          },
+          {
+            "id": "city-0-3",
+            "text": "Small towel fast drying",
+            "checked": false
+          },
+          {
+            "id": "city-0-4",
+            "text": "Toothbrush",
+            "checked": false
+          },
+          {
+            "id": "city-0-5",
+            "text": "Sun screen",
+            "checked": false
+          },
+          {
+            "id": "city-0-6",
+            "text": "Cap (baseball cap)",
+            "checked": false
+          },
+          {
+            "id": "city-0-7",
+            "text": "Walking socks",
+            "checked": false
+          },
+          {
+            "id": "city-0-8",
+            "text": "Woolen tights",
+            "checked": false
+          },
+          {
+            "id": "city-0-9",
+            "text": "Underwear | Boxer",
+            "checked": false
+          },
+          {
+            "id": "city-0-10",
+            "text": "Travel bag (side bag)",
+            "checked": false
+          },
+          {
+            "id": "city-0-11",
+            "text": "Bus card",
+            "checked": false
+          },
+          {
+            "id": "city-0-12",
+            "text": "Camera battery",
+            "checked": false
+          },
+          {
+            "id": "city-0-13",
+            "text": "Keys",
+            "checked": false
+          },
+          {
+            "id": "city-0-14",
+            "text": "SD card",
+            "checked": false
+          },
+          {
+            "id": "city-0-15",
+            "text": "Bankpas / Credit card",
+            "checked": false
+          },
+          {
+            "id": "city-0-16",
+            "text": "Phone charger",
+            "checked": false
+          },
+          {
+            "id": "city-0-17",
+            "text": "Emergency numbers",
+            "checked": false
+          },
+          {
+            "id": "city-0-18",
+            "text": "Shin Ramen + Pickled veggies.",
+            "checked": false
+          },
+          {
+            "id": "city-0-19",
+            "text": "Diaper",
+            "checked": false
+          },
+          {
+            "id": "city-0-20",
+            "text": "Baby’s: | Vaseline | Paracetamol | Gloves and Hat | Diaper | Maize finger | Otrijven | Vitamin D",
+            "checked": false
+          },
+          {
+            "id": "city-0-21",
+            "text": "Baby’s: Sudo cream | Sunscreen | Nose spray | Paracetamol | Swimming pants | Floaters | Hat",
+            "checked": false
+          },
+          {
+            "id": "city-0-22",
+            "text": "Binocular",
+            "checked": false
+          },
+          {
+            "id": "city-0-23",
+            "text": "Swimming pants",
+            "checked": false
+          },
+          {
+            "id": "city-0-24",
+            "text": "Camera Bag",
+            "checked": false
+          },
+          {
+            "id": "city-0-25",
+            "text": "Extra Socks",
+            "checked": false
+          },
+          {
+            "id": "city-0-26",
+            "text": "Cold bag (red)",
+            "checked": false
+          },
+          {
+            "id": "city-0-27",
+            "text": "Phone Charger",
+            "checked": false
+          },
+          {
+            "id": "city-0-28",
+            "text": "Band aid blisters",
+            "checked": false
+          }
         ]
       }
     ]
@@ -263,45 +474,201 @@ const DATA = {
       {
         "heading": null,
         "items": [
-          "Spoon / Fork",
-          "UV labello stick",
-          "Hiking boots",
-          "Woolen cap",
-          "Gloves",
-          "Small towel fast drying",
-          "Slippers",
-          "Sun screen",
-          "Cap (baseball cap)",
-          "Soap (small bottle)",
-          "Walking socks",
-          "Woolen tights",
-          "Toothpaste (small)",
-          "Underwear",
-          "Tooth brush",
-          "Shirt with long sleeves",
-          "Toilet paper",
-          "Set of clean travelling clothes",
-          "Band aid blisters (Make a travel pack)",
-          "Sleeping bag",
-          "keys",
-          "Sleeping mat",
-          "Bankpas",
-          "Pillow (air filled)",
-          "Emergency numbers",
-          "Money",
-          "Telephone",
-          "Ticket",
-          "teabags",
-          "Passport",
-          "Credit card",
-          "Plastic garbage bags",
-          "Pocket knife",
-          "Lighter",
-          "Camera",
-          "Sunglasses",
-          "Mug (plastic Mugs + plates, car camping)",
-          "Water bottle small",
-          "Gas + Stove + water + Aluminum pot"
+          {
+            "id": "hike-0-0",
+            "text": "Spoon / Fork",
+            "checked": false
+          },
+          {
+            "id": "hike-0-1",
+            "text": "UV labello stick",
+            "checked": false
+          },
+          {
+            "id": "hike-0-2",
+            "text": "Hiking boots",
+            "checked": false
+          },
+          {
+            "id": "hike-0-3",
+            "text": "Woolen cap",
+            "checked": false
+          },
+          {
+            "id": "hike-0-4",
+            "text": "Gloves",
+            "checked": false
+          },
+          {
+            "id": "hike-0-5",
+            "text": "Small towel fast drying",
+            "checked": false
+          },
+          {
+            "id": "hike-0-6",
+            "text": "Slippers",
+            "checked": false
+          },
+          {
+            "id": "hike-0-7",
+            "text": "Sun screen",
+            "checked": false
+          },
+          {
+            "id": "hike-0-8",
+            "text": "Cap (baseball cap)",
+            "checked": false
+          },
+          {
+            "id": "hike-0-9",
+            "text": "Soap (small bottle)",
+            "checked": false
+          },
+          {
+            "id": "hike-0-10",
+            "text": "Walking socks",
+            "checked": false
+          },
+          {
+            "id": "hike-0-11",
+            "text": "Woolen tights",
+            "checked": false
+          },
+          {
+            "id": "hike-0-12",
+            "text": "Toothpaste (small)",
+            "checked": false
+          },
+          {
+            "id": "hike-0-13",
+            "text": "Underwear",
+            "checked": false
+          },
+          {
+            "id": "hike-0-14",
+            "text": "Tooth brush",
+            "checked": false
+          },
+          {
+            "id": "hike-0-15",
+            "text": "Shirt with long sleeves",
+            "checked": false
+          },
+          {
+            "id": "hike-0-16",
+            "text": "Toilet paper",
+            "checked": false
+          },
+          {
+            "id": "hike-0-17",
+            "text": "Set of clean travelling clothes",
+            "checked": false
+          },
+          {
+            "id": "hike-0-18",
+            "text": "Band aid blisters (Make a travel pack)",
+            "checked": false
+          },
+          {
+            "id": "hike-0-19",
+            "text": "Sleeping bag",
+            "checked": false
+          },
+          {
+            "id": "hike-0-20",
+            "text": "keys",
+            "checked": false
+          },
+          {
+            "id": "hike-0-21",
+            "text": "Sleeping mat",
+            "checked": false
+          },
+          {
+            "id": "hike-0-22",
+            "text": "Bankpas",
+            "checked": false
+          },
+          {
+            "id": "hike-0-23",
+            "text": "Pillow (air filled)",
+            "checked": false
+          },
+          {
+            "id": "hike-0-24",
+            "text": "Emergency numbers",
+            "checked": false
+          },
+          {
+            "id": "hike-0-25",
+            "text": "Money",
+            "checked": false
+          },
+          {
+            "id": "hike-0-26",
+            "text": "Telephone",
+            "checked": false
+          },
+          {
+            "id": "hike-0-27",
+            "text": "Ticket",
+            "checked": false
+          },
+          {
+            "id": "hike-0-28",
+            "text": "teabags",
+            "checked": false
+          },
+          {
+            "id": "hike-0-29",
+            "text": "Passport",
+            "checked": false
+          },
+          {
+            "id": "hike-0-30",
+            "text": "Credit card",
+            "checked": false
+          },
+          {
+            "id": "hike-0-31",
+            "text": "Plastic garbage bags",
+            "checked": false
+          },
+          {
+            "id": "hike-0-32",
+            "text": "Pocket knife",
+            "checked": false
+          },
+          {
+            "id": "hike-0-33",
+            "text": "Lighter",
+            "checked": false
+          },
+          {
+            "id": "hike-0-34",
+            "text": "Camera",
+            "checked": false
+          },
+          {
+            "id": "hike-0-35",
+            "text": "Sunglasses",
+            "checked": false
+          },
+          {
+            "id": "hike-0-36",
+            "text": "Mug (plastic Mugs + plates, car camping)",
+            "checked": false
+          },
+          {
+            "id": "hike-0-37",
+            "text": "Water bottle small",
+            "checked": false
+          },
+          {
+            "id": "hike-0-38",
+            "text": "Gas + Stove + water + Aluminum pot",
+            "checked": false
+          }
         ]
       }
     ]
@@ -313,85 +680,381 @@ const DATA = {
       {
         "heading": "Gear",
         "items": [
-          "Passport /ID card/ License",
-          "UV labello stick",
-          "Torch/headlight",
-          "Hiking boots",
-          "Woolen cap",
-          "Extra shoe laces",
-          "Gloves",
-          "Small towel fast drying",
-          "Rain protection rug sack",
-          "Slippers",
-          "Sun screen",
-          "Waterproof bags",
-          "Cap (baseball cap)",
-          "Soap (small bottle)",
-          "Tent",
-          "Walking socks",
-          "Rain coat / trousers",
-          "Lighter",
-          "Woolen tights",
-          "Toothpaste (small)",
-          "Sunglasses",
-          "Scarf to cover the head",
-          "Tooth brush",
-          "Water bottle small",
-          "Underwear",
-          "Toilet paper",
-          "Big water bottles (3-4)",
-          "Watch",
-          "Band aid blisters",
-          "Walking trousers (fast drying)",
-          "Shirt with long sleeves",
-          "Shirak (in two suitcase)",
-          "e-reader",
-          "Deodorant",
-          "Ground sheet",
-          "Memory card/ Camera",
-          "Set of clean travelling clothes",
-          "Tent stick (To create roof for cooking)",
-          "Shirts with short sleeves (fast drying)",
-          "Walking sticks",
-          "keys",
-          "Sleeping mat double bever",
-          "Sleeping bag",
-          "Bankpas / Credit card",
-          "Insect repellent",
-          "Sleeping mat",
-          "Emergency numbers",
-          "Eye mask",
-          "Pillow (air filled)",
-          "Telephone",
-          "Extra Lighter",
-          "Sheet bag",
-          "Batteries",
-          "Check doors and Windows if locked",
-          "Sitting mat",
-          "Nalgene water bag",
-          "Umbrella",
-          "Money / Bankpas / Credit card",
-          "Drone",
-          "Charge the power bank and battery",
-          "Ticket",
-          "Crocks",
-          "Running Shoe, shorts + T-shirt"
+          {
+            "id": "camp-0-0",
+            "text": "Passport /ID card/ License",
+            "checked": false
+          },
+          {
+            "id": "camp-0-1",
+            "text": "UV labello stick",
+            "checked": false
+          },
+          {
+            "id": "camp-0-2",
+            "text": "Torch/headlight",
+            "checked": false
+          },
+          {
+            "id": "camp-0-3",
+            "text": "Hiking boots",
+            "checked": false
+          },
+          {
+            "id": "camp-0-4",
+            "text": "Woolen cap",
+            "checked": false
+          },
+          {
+            "id": "camp-0-5",
+            "text": "Extra shoe laces",
+            "checked": false
+          },
+          {
+            "id": "camp-0-6",
+            "text": "Gloves",
+            "checked": false
+          },
+          {
+            "id": "camp-0-7",
+            "text": "Small towel fast drying",
+            "checked": false
+          },
+          {
+            "id": "camp-0-8",
+            "text": "Rain protection rug sack",
+            "checked": false
+          },
+          {
+            "id": "camp-0-9",
+            "text": "Slippers",
+            "checked": false
+          },
+          {
+            "id": "camp-0-10",
+            "text": "Sun screen",
+            "checked": false
+          },
+          {
+            "id": "camp-0-11",
+            "text": "Waterproof bags",
+            "checked": false
+          },
+          {
+            "id": "camp-0-12",
+            "text": "Cap (baseball cap)",
+            "checked": false
+          },
+          {
+            "id": "camp-0-13",
+            "text": "Soap (small bottle)",
+            "checked": false
+          },
+          {
+            "id": "camp-0-14",
+            "text": "Tent",
+            "checked": false
+          },
+          {
+            "id": "camp-0-15",
+            "text": "Walking socks",
+            "checked": false
+          },
+          {
+            "id": "camp-0-16",
+            "text": "Rain coat / trousers",
+            "checked": false
+          },
+          {
+            "id": "camp-0-17",
+            "text": "Lighter",
+            "checked": false
+          },
+          {
+            "id": "camp-0-18",
+            "text": "Woolen tights",
+            "checked": false
+          },
+          {
+            "id": "camp-0-19",
+            "text": "Toothpaste (small)",
+            "checked": false
+          },
+          {
+            "id": "camp-0-20",
+            "text": "Sunglasses",
+            "checked": false
+          },
+          {
+            "id": "camp-0-21",
+            "text": "Scarf to cover the head",
+            "checked": false
+          },
+          {
+            "id": "camp-0-22",
+            "text": "Tooth brush",
+            "checked": false
+          },
+          {
+            "id": "camp-0-23",
+            "text": "Water bottle small",
+            "checked": false
+          },
+          {
+            "id": "camp-0-24",
+            "text": "Underwear",
+            "checked": false
+          },
+          {
+            "id": "camp-0-25",
+            "text": "Toilet paper",
+            "checked": false
+          },
+          {
+            "id": "camp-0-26",
+            "text": "Big water bottles (3-4)",
+            "checked": false
+          },
+          {
+            "id": "camp-0-27",
+            "text": "Watch",
+            "checked": false
+          },
+          {
+            "id": "camp-0-28",
+            "text": "Band aid blisters",
+            "checked": false
+          },
+          {
+            "id": "camp-0-29",
+            "text": "Walking trousers (fast drying)",
+            "checked": false
+          },
+          {
+            "id": "camp-0-30",
+            "text": "Shirt with long sleeves",
+            "checked": false
+          },
+          {
+            "id": "camp-0-31",
+            "text": "Shirak (in two suitcase)",
+            "checked": false
+          },
+          {
+            "id": "camp-0-32",
+            "text": "e-reader",
+            "checked": false
+          },
+          {
+            "id": "camp-0-33",
+            "text": "Deodorant",
+            "checked": false
+          },
+          {
+            "id": "camp-0-34",
+            "text": "Ground sheet",
+            "checked": false
+          },
+          {
+            "id": "camp-0-35",
+            "text": "Memory card/ Camera",
+            "checked": false
+          },
+          {
+            "id": "camp-0-36",
+            "text": "Set of clean travelling clothes",
+            "checked": false
+          },
+          {
+            "id": "camp-0-37",
+            "text": "Tent stick (To create roof for cooking)",
+            "checked": false
+          },
+          {
+            "id": "camp-0-38",
+            "text": "Shirts with short sleeves (fast drying)",
+            "checked": false
+          },
+          {
+            "id": "camp-0-39",
+            "text": "Walking sticks",
+            "checked": false
+          },
+          {
+            "id": "camp-0-40",
+            "text": "keys",
+            "checked": false
+          },
+          {
+            "id": "camp-0-41",
+            "text": "Sleeping mat double bever",
+            "checked": false
+          },
+          {
+            "id": "camp-0-42",
+            "text": "Sleeping bag",
+            "checked": false
+          },
+          {
+            "id": "camp-0-43",
+            "text": "Bankpas / Credit card",
+            "checked": false
+          },
+          {
+            "id": "camp-0-44",
+            "text": "Insect repellent",
+            "checked": false
+          },
+          {
+            "id": "camp-0-45",
+            "text": "Sleeping mat",
+            "checked": false
+          },
+          {
+            "id": "camp-0-46",
+            "text": "Emergency numbers",
+            "checked": false
+          },
+          {
+            "id": "camp-0-47",
+            "text": "Eye mask",
+            "checked": false
+          },
+          {
+            "id": "camp-0-48",
+            "text": "Pillow (air filled)",
+            "checked": false
+          },
+          {
+            "id": "camp-0-49",
+            "text": "Telephone",
+            "checked": false
+          },
+          {
+            "id": "camp-0-50",
+            "text": "Extra Lighter",
+            "checked": false
+          },
+          {
+            "id": "camp-0-51",
+            "text": "Sheet bag",
+            "checked": false
+          },
+          {
+            "id": "camp-0-52",
+            "text": "Batteries",
+            "checked": false
+          },
+          {
+            "id": "camp-0-53",
+            "text": "Check doors and Windows if locked",
+            "checked": false
+          },
+          {
+            "id": "camp-0-54",
+            "text": "Sitting mat",
+            "checked": false
+          },
+          {
+            "id": "camp-0-55",
+            "text": "Nalgene water bag",
+            "checked": false
+          },
+          {
+            "id": "camp-0-56",
+            "text": "Umbrella",
+            "checked": false
+          },
+          {
+            "id": "camp-0-57",
+            "text": "Money / Bankpas / Credit card",
+            "checked": false
+          },
+          {
+            "id": "camp-0-58",
+            "text": "Drone",
+            "checked": false
+          },
+          {
+            "id": "camp-0-59",
+            "text": "Charge the power bank and battery",
+            "checked": false
+          },
+          {
+            "id": "camp-0-60",
+            "text": "Ticket",
+            "checked": false
+          },
+          {
+            "id": "camp-0-61",
+            "text": "Crocks",
+            "checked": false
+          },
+          {
+            "id": "camp-0-62",
+            "text": "Running Shoe, shorts + T-shirt",
+            "checked": false
+          }
         ]
       },
       {
         "heading": "Food",
         "items": [
-          "Extra cooking pot",
-          "Dish washing liquid",
-          "Eggs",
-          "Gas stove (buy stable one)",
-          "Plastic garbage bags",
-          "Chocolate (bars)",
-          "Shin Ramen + Noodles Pot (system)",
-          "Packet vegetables",
-          "Separate basket for dishes and cooking and washing, etc.",
-          "Cup-a-soup",
-          "Spoon / Fork"
+          {
+            "id": "camp-1-0",
+            "text": "Extra cooking pot",
+            "checked": false
+          },
+          {
+            "id": "camp-1-1",
+            "text": "Dish washing liquid",
+            "checked": false
+          },
+          {
+            "id": "camp-1-2",
+            "text": "Eggs",
+            "checked": false
+          },
+          {
+            "id": "camp-1-3",
+            "text": "Gas stove (buy stable one)",
+            "checked": false
+          },
+          {
+            "id": "camp-1-4",
+            "text": "Plastic garbage bags",
+            "checked": false
+          },
+          {
+            "id": "camp-1-5",
+            "text": "Chocolate (bars)",
+            "checked": false
+          },
+          {
+            "id": "camp-1-6",
+            "text": "Shin Ramen + Noodles Pot (system)",
+            "checked": false
+          },
+          {
+            "id": "camp-1-7",
+            "text": "Packet vegetables",
+            "checked": false
+          },
+          {
+            "id": "camp-1-8",
+            "text": "Separate basket for dishes and cooking and washing, etc.",
+            "checked": false
+          },
+          {
+            "id": "camp-1-9",
+            "text": "Cup-a-soup",
+            "checked": false
+          },
+          {
+            "id": "camp-1-10",
+            "text": "Spoon / Fork",
+            "checked": false
+          }
         ]
       }
     ]
@@ -400,30 +1063,97 @@ const DATA = {
 
 const TAB_ORDER = ['city','hike','camp'];
 const TAB_ICON = { city:'\u2708\uFE0F', hike:'\uD83E\uDD7E', camp:'\uD83C\uDFD5\uFE0F' };
-const STORAGE_KEY = 'packing-checklist-checked-v1';
+const STORAGE_KEY = 'packing-checklist-data-v2';
+const LEGACY_CHECKED_KEY = 'packing-checklist-checked-v1';
 
-let state = {};
+let DATA = null;
 let activeTab = TAB_ORDER[0];
+let editMode = false;
 let confirmingClear = false;
+let importMessage = null;
+let pendingImportData = null;
+let idCounter = 0;
+
 const storageAvailable = (typeof window !== 'undefined') && !!window.storage;
 
-function itemId(tabKey, sIdx, iIdx){ return tabKey + '-' + sIdx + '-' + iIdx; }
+function genId(){
+  idCounter += 1;
+  return 'new-' + Date.now().toString(36) + '-' + idCounter + '-' + Math.random().toString(36).slice(2,7);
+}
 
-async function loadState(){
-  if(!storageAvailable) return {};
-  try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    if(res && typeof res.value === 'string') return JSON.parse(res.value);
-    return {};
-  }catch(err){
-    return {};
+function cloneDefault(){
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+
+function normalizeItem(it){
+  if(typeof it === 'string'){
+    const t = it.trim();
+    return t ? { id: genId(), text: t, checked:false } : null;
   }
+  if(it && typeof it === 'object' && typeof it.text === 'string' && it.text.trim()){
+    return {
+      id: (typeof it.id === 'string' && it.id) ? it.id : genId(),
+      text: it.text.trim(),
+      checked: !!it.checked
+    };
+  }
+  return null;
+}
+
+function normalizeData(raw){
+  if(!raw || typeof raw !== 'object') return null;
+  const out = {};
+  for(const key of TAB_ORDER){
+    const src = raw[key];
+    if(!src || typeof src !== 'object' || !Array.isArray(src.sections)) return null;
+    out[key] = {
+      label: typeof src.label === 'string' && src.label.trim() ? src.label : DEFAULT_DATA[key].label,
+      subtitle: typeof src.subtitle === 'string' ? src.subtitle : DEFAULT_DATA[key].subtitle,
+      sections: src.sections.map((sec, sIdx) => ({
+        heading: (sec && typeof sec.heading === 'string')
+          ? sec.heading
+          : (DEFAULT_DATA[key].sections[sIdx] ? DEFAULT_DATA[key].sections[sIdx].heading : null),
+        items: Array.isArray(sec && sec.items) ? sec.items.map(normalizeItem).filter(Boolean) : []
+      }))
+    };
+  }
+  return out;
+}
+
+async function loadInitialData(){
+  if(storageAvailable){
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if(res && typeof res.value === 'string'){
+        const parsed = JSON.parse(res.value);
+        const normalized = normalizeData(parsed);
+        if(normalized) return normalized;
+      }
+    }catch(err){ /* key not present yet, fall through */ }
+
+    try{
+      const legacy = await window.storage.get(LEGACY_CHECKED_KEY, false);
+      if(legacy && typeof legacy.value === 'string'){
+        const legacyChecked = JSON.parse(legacy.value);
+        const seeded = cloneDefault();
+        TAB_ORDER.forEach(tabKey => {
+          seeded[tabKey].sections.forEach(sec => {
+            sec.items.forEach(item => {
+              if(legacyChecked[item.id]) item.checked = true;
+            });
+          });
+        });
+        return seeded;
+      }
+    }catch(err){ /* no legacy data either */ }
+  }
+  return cloneDefault();
 }
 
 async function persist(){
   if(!storageAvailable) return;
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+    await window.storage.set(STORAGE_KEY, JSON.stringify(DATA), false);
   }catch(err){
     console.error('checklist: could not save', err);
   }
@@ -432,17 +1162,13 @@ async function persist(){
 function counts(tabKey){
   const tab = DATA[tabKey];
   let total = 0, checked = 0;
-  tab.sections.forEach((sec, sIdx) => {
-    sec.items.forEach((_, iIdx) => {
+  tab.sections.forEach(sec => {
+    sec.items.forEach(item => {
       total++;
-      if(state[itemId(tabKey, sIdx, iIdx)]) checked++;
+      if(item.checked) checked++;
     });
   });
   return { checked, total };
-}
-
-function escapeHtml(str){
-  return str.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 
 function renderTabs(){
@@ -456,10 +1182,20 @@ function renderTabs(){
     btn.className = 'tab-btn' + (key === activeTab ? ' active' : '');
     btn.setAttribute('role','tab');
     btn.setAttribute('aria-selected', key === activeTab ? 'true' : 'false');
-    btn.innerHTML =
-      '<span aria-hidden="true">' + TAB_ICON[key] + '</span>' +
-      '<span>' + tab.label + '</span>' +
-      '<span class="tab-count">' + checked + '/' + total + '</span>';
+
+    const icon = document.createElement('span');
+    icon.setAttribute('aria-hidden','true');
+    icon.textContent = TAB_ICON[key];
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = tab.label;
+    const countSpan = document.createElement('span');
+    countSpan.className = 'tab-count';
+    countSpan.textContent = checked + '/' + total;
+
+    btn.appendChild(icon);
+    btn.appendChild(labelSpan);
+    btn.appendChild(countSpan);
+
     btn.addEventListener('click', () => {
       if(activeTab === key) return;
       activeTab = key;
@@ -476,9 +1212,27 @@ function renderProgress(){
   document.getElementById('progress-label').textContent = checked + ' of ' + total + ' packed';
 }
 
+function renderEditToggle(){
+  const wrap = document.getElementById('edit-toggle-wrap');
+  wrap.innerHTML = '';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-ghost' + (editMode ? ' active-edit' : '');
+  btn.textContent = editMode ? 'Done editing' : 'Edit';
+  btn.addEventListener('click', () => {
+    editMode = !editMode;
+    confirmingClear = false;
+    importMessage = null;
+    pendingImportData = null;
+    renderAll();
+  });
+  wrap.appendChild(btn);
+}
+
 function renderClearControl(){
   const wrap = document.getElementById('clear-wrap');
   wrap.innerHTML = '';
+  if(editMode) return;
   if(!confirmingClear){
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -493,10 +1247,7 @@ function renderClearControl(){
     const yes = document.createElement('button');
     yes.type = 'button'; yes.className = 'btn-danger'; yes.textContent = 'Yes, clear';
     yes.addEventListener('click', async () => {
-      const tab = DATA[activeTab];
-      tab.sections.forEach((sec, sIdx) => sec.items.forEach((_, iIdx) => {
-        delete state[itemId(activeTab, sIdx, iIdx)];
-      }));
+      DATA[activeTab].sections.forEach(sec => sec.items.forEach(item => { item.checked = false; }));
       confirmingClear = false;
       await persist();
       renderAll();
@@ -510,12 +1261,221 @@ function renderClearControl(){
   }
 }
 
+function exportData(){
+  const payload = JSON.stringify(DATA, null, 2);
+  const blob = new Blob([payload], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const stamp = new Date().toISOString().slice(0,10);
+  a.download = 'travel-packing-checklist-' + stamp + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function handleImportFile(file){
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    let parsed;
+    try{
+      parsed = JSON.parse(ev.target.result);
+    }catch(err){
+      importMessage = { type:'error', text:"That file isn't valid JSON." };
+      pendingImportData = null;
+      renderEditToolbar();
+      return;
+    }
+    const normalized = normalizeData(parsed);
+    if(!normalized){
+      importMessage = { type:'error', text:"That file doesn't match the checklist format." };
+      pendingImportData = null;
+      renderEditToolbar();
+      return;
+    }
+    pendingImportData = normalized;
+    importMessage = { type:'confirm', text:'Replace all your current lists with this file?' };
+    renderEditToolbar();
+  };
+  reader.onerror = () => {
+    importMessage = { type:'error', text:'Could not read that file.' };
+    renderEditToolbar();
+  };
+  reader.readAsText(file);
+}
+
+async function applyPendingImport(){
+  if(!pendingImportData) return;
+  DATA = pendingImportData;
+  pendingImportData = null;
+  importMessage = { type:'success', text:'Checklist imported.' };
+  await persist();
+  if(!TAB_ORDER.includes(activeTab)) activeTab = TAB_ORDER[0];
+  renderAll();
+  setTimeout(() => {
+    importMessage = null;
+    renderEditToolbar();
+  }, 2500);
+}
+
+function renderEditToolbar(){
+  const bar = document.getElementById('edit-toolbar');
+  bar.innerHTML = '';
+  bar.classList.toggle('active', editMode);
+  if(!editMode) return;
+
+  const exportBtn = document.createElement('button');
+  exportBtn.type = 'button'; exportBtn.className = 'btn-ghost'; exportBtn.textContent = 'Export JSON';
+  exportBtn.addEventListener('click', exportData);
+
+  const importBtn = document.createElement('button');
+  importBtn.type = 'button'; importBtn.className = 'btn-ghost'; importBtn.textContent = 'Import JSON';
+  importBtn.addEventListener('click', () => document.getElementById('import-file-input').click());
+
+  const hint = document.createElement('span');
+  hint.className = 'edit-hint';
+  hint.textContent = 'Type to rename an item, tap \u00D7 to remove it, or add a new one below a list.';
+
+  bar.appendChild(exportBtn);
+  bar.appendChild(importBtn);
+  bar.appendChild(hint);
+
+  if(importMessage){
+    const msgRow = document.createElement('div');
+    msgRow.className = 'import-message ' + importMessage.type;
+    const msgText = document.createElement('span');
+    msgText.textContent = importMessage.text;
+    msgRow.appendChild(msgText);
+    if(importMessage.type === 'confirm'){
+      const yes = document.createElement('button');
+      yes.type = 'button'; yes.className = 'btn-danger'; yes.textContent = 'Yes, replace';
+      yes.addEventListener('click', applyPendingImport);
+      const no = document.createElement('button');
+      no.type = 'button'; no.className = 'btn-ghost'; no.textContent = 'Cancel';
+      no.addEventListener('click', () => { importMessage = null; pendingImportData = null; renderEditToolbar(); });
+      msgRow.appendChild(yes);
+      msgRow.appendChild(no);
+    }
+    bar.appendChild(msgRow);
+  }
+}
+
+function buildViewRow(item){
+  const row = document.createElement('label');
+  row.className = 'item';
+
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.className = 'real-checkbox';
+  input.checked = !!item.checked;
+
+  const box = document.createElement('span');
+  box.className = 'box';
+  box.setAttribute('aria-hidden','true');
+  box.innerHTML = '<span class="stamp">&#10003;</span>';
+
+  const labelSpan = document.createElement('span');
+  labelSpan.className = 'label';
+  labelSpan.textContent = item.text;
+
+  row.appendChild(input);
+  row.appendChild(box);
+  row.appendChild(labelSpan);
+
+  input.addEventListener('change', async () => {
+    item.checked = input.checked;
+    await persist();
+    renderTabs();
+    renderProgress();
+  });
+
+  return row;
+}
+
+function buildEditRow(tabKey, sIdx, item){
+  const row = document.createElement('div');
+  row.className = 'item-edit-row';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'item-edit-input';
+  input.value = item.text;
+  input.setAttribute('aria-label', 'Edit item text');
+
+  const commit = async () => {
+    const v = input.value.trim();
+    if(v && v !== item.text){
+      item.text = v;
+      await persist();
+    } else {
+      input.value = item.text;
+    }
+  };
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); input.blur(); } });
+
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'item-delete-btn';
+  del.textContent = '\u00D7';
+  del.title = 'Delete item';
+  del.setAttribute('aria-label', 'Delete ' + item.text);
+  del.addEventListener('click', async () => {
+    const sec = DATA[tabKey].sections[sIdx];
+    sec.items = sec.items.filter(it => it.id !== item.id);
+    await persist();
+    renderAll();
+  });
+
+  row.appendChild(input);
+  row.appendChild(del);
+  return row;
+}
+
+function buildAddRow(tabKey, sIdx){
+  const row = document.createElement('div');
+  row.className = 'item-add-row';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'item-add-input';
+  input.placeholder = 'Add item\u2026';
+  input.setAttribute('aria-label', 'New item text');
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'item-add-btn';
+  btn.textContent = 'Add';
+
+  const doAdd = async () => {
+    const v = input.value.trim();
+    if(!v) return;
+    DATA[tabKey].sections[sIdx].items.push({ id: genId(), text: v, checked:false });
+    input.value = '';
+    await persist();
+    renderAll();
+    requestAnimationFrame(() => {
+      const inputs = document.querySelectorAll('#sections .item-add-input');
+      if(inputs[sIdx]) inputs[sIdx].focus();
+    });
+  };
+  btn.addEventListener('click', doAdd);
+  input.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); doAdd(); } });
+
+  row.appendChild(input);
+  row.appendChild(btn);
+  return row;
+}
+
 function renderPanel(){
   const tab = DATA[activeTab];
   document.getElementById('panel-title').textContent = tab.label;
   document.getElementById('panel-subtitle').textContent = tab.subtitle;
   renderProgress();
+  renderEditToggle();
   renderClearControl();
+  renderEditToolbar();
 
   const container = document.getElementById('sections');
   container.innerHTML = '';
@@ -528,24 +1488,12 @@ function renderPanel(){
     }
     const grid = document.createElement('div');
     grid.className = 'items-grid';
-    sec.items.forEach((itemLabel, iIdx) => {
-      const id = itemId(activeTab, sIdx, iIdx);
-      const isChecked = !!state[id];
-      const row = document.createElement('label');
-      row.className = 'item';
-      row.innerHTML =
-        '<input type="checkbox" class="real-checkbox"' + (isChecked ? ' checked' : '') + '>' +
-        '<span class="box" aria-hidden="true"><span class="stamp">&#10003;</span></span>' +
-        '<span class="label">' + escapeHtml(itemLabel) + '</span>';
-      const input = row.querySelector('input');
-      input.addEventListener('change', async () => {
-        if(input.checked) state[id] = true; else delete state[id];
-        await persist();
-        renderTabs();
-        renderProgress();
-      });
-      grid.appendChild(row);
+    sec.items.forEach((item) => {
+      grid.appendChild(editMode ? buildEditRow(activeTab, sIdx, item) : buildViewRow(item));
     });
+    if(editMode){
+      grid.appendChild(buildAddRow(activeTab, sIdx));
+    }
     container.appendChild(grid);
   });
 }
@@ -555,12 +1503,21 @@ function renderAll(){
   renderPanel();
 }
 
-renderAll();
+document.getElementById('import-file-input').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if(file) handleImportFile(file);
+  e.target.value = '';
+});
+
 (async function init(){
-  state = await loadState();
+  DATA = await loadInitialData();
+  await persist();
   if(!storageAvailable){
-    document.getElementById('offline-note').style.display = 'inline-block';
+    document.getElementById('offline-note').classList.remove('hidden');
   }
+  document.getElementById('loading-msg').classList.add('hidden');
+  document.getElementById('tabs').classList.remove('hidden');
+  document.getElementById('panel').classList.remove('hidden');
   renderAll();
 })();
 </script>
