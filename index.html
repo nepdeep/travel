@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Travel Packing Checklist</title>
+<style>
+:root{
+  --paper:#FAF6EF;
+  --paper-alt:#F1EAD9;
+  --ink:#1F2B45;
+  --ink-soft:#6B7280;
+  --line:#DED2B3;
+  --stamp:#2F6F4E;
+  --stamp-soft:#E4EFE8;
+  --accent:#B1472C;
+  --serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+}
+.app{ max-width:880px; margin:0 auto; padding:32px 20px 90px; }
+
+.top{ border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:22px; }
+.top h1{
+  font-family:var(--serif);
+  font-size:2rem;
+  margin:0 0 6px;
+  letter-spacing:-.01em;
+}
+.top p{ margin:0; color:var(--ink-soft); font-size:.95rem; }
+.offline-note{
+  display:none;
+  margin-top:10px;
+  font-family:var(--mono);
+  font-size:.72rem;
+  letter-spacing:.02em;
+  color:var(--accent);
+  background:#F7E9E3;
+  padding:5px 10px;
+  border-radius:999px;
+}
+
+.tabs{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:0; }
+.tab-btn{
+  display:flex; align-items:center; gap:8px;
+  font-family:var(--sans);
+  font-size:.92rem;
+  font-weight:600;
+  padding:10px 14px;
+  border-radius:10px 10px 0 0;
+  border:1px solid var(--line);
+  border-bottom:none;
+  background:var(--paper-alt);
+  color:var(--ink-soft);
+  cursor:pointer;
+  position:relative;
+  top:1px;
+}
+.tab-btn .tab-count{
+  font-family:var(--mono);
+  font-size:.72rem;
+  opacity:.7;
+}
+.tab-btn.active{
+  background:var(--paper);
+  color:var(--ink);
+  border-bottom:3px solid var(--accent);
+}
+.tab-btn:not(.active):hover{ background:#EAE1CB; }
+.tab-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+.panel{ border-top:3px solid var(--ink); padding-top:20px; }
+.panel-head{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;
+}
+.panel-head h2{ font-family:var(--serif); font-size:1.4rem; margin:0 0 2px; }
+.panel-head .subtitle{ margin:0; color:var(--ink-soft); font-size:.88rem; font-style:italic; }
+
+.clear-wrap{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.btn-ghost{
+  font-family:var(--sans); font-size:.82rem; font-weight:600;
+  background:none; border:1px solid var(--line); color:var(--ink-soft);
+  padding:7px 12px; border-radius:8px; cursor:pointer;
+}
+.btn-ghost:hover{ border-color:var(--accent); color:var(--accent); }
+.btn-danger{
+  font-family:var(--sans); font-size:.82rem; font-weight:600;
+  background:var(--accent); border:1px solid var(--accent); color:#fff;
+  padding:7px 12px; border-radius:8px; cursor:pointer;
+}
+.btn-danger:hover{ opacity:.9; }
+
+.progress-row{ display:flex; align-items:center; gap:12px; margin:16px 0 6px; }
+.progress-track{ flex:1; height:8px; background:var(--paper-alt); border:1px solid var(--line); border-radius:99px; overflow:hidden; }
+.progress-fill{ height:100%; background:var(--stamp); width:0%; transition:width .25s ease; }
+.progress-label{ font-family:var(--mono); font-size:.78rem; color:var(--ink-soft); white-space:nowrap; }
+
+.section-heading{
+  font-family:var(--mono);
+  text-transform:uppercase;
+  letter-spacing:.1em;
+  font-size:.74rem;
+  color:var(--ink-soft);
+  margin:22px 0 10px;
+  padding-bottom:6px;
+  border-bottom:1px dashed var(--line);
+}
+.section-heading:first-child{ margin-top:8px; }
+
+.items-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:2px 14px;
+}
+.item{
+  position:relative;
+  display:flex; align-items:center; gap:11px;
+  padding:8px 8px 8px 6px;
+  border-radius:8px;
+  cursor:pointer;
+}
+.item:hover{ background:var(--paper-alt); }
+.real-checkbox{
+  position:absolute;
+  opacity:0;
+  width:26px; height:26px;
+  left:4px; top:50%;
+  transform:translateY(-50%);
+  margin:0;
+  cursor:pointer;
+}
+.box{
+  flex:0 0 auto;
+  width:20px; height:20px;
+  border:2px solid #B9AF9C;
+  border-radius:6px;
+  background:#fff;
+  position:relative;
+  display:flex; align-items:center; justify-content:center;
+  transition:border-color .15s ease, background .15s ease;
+}
+.real-checkbox:checked ~ .box{
+  border-color:var(--stamp);
+  background:var(--stamp-soft);
+}
+.real-checkbox:focus-visible ~ .box{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+.stamp{
+  color:var(--stamp);
+  font-size:14px;
+  line-height:1;
+  font-weight:700;
+  opacity:0;
+  transform:scale(.4) rotate(-20deg);
+  transition:opacity .15s ease, transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.real-checkbox:checked ~ .box .stamp{
+  opacity:1;
+  transform:scale(1) rotate(-8deg);
+}
+.label{
+  font-size:.94rem;
+  line-height:1.35;
+}
+.real-checkbox:checked ~ .label{
+  color:var(--ink-soft);
+  text-decoration:line-through;
+  text-decoration-color:#C9BFA8;
+}
+
+@media (max-width:520px){
+  .top h1{ font-size:1.6rem; }
+  .tab-btn{ padding:9px 10px; font-size:.85rem; }
+  .items-grid{ grid-template-columns:1fr; }
+  .panel-head{ flex-direction:column; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>Packing Checklist</h1>
+    <p>Pick a trip type below, then tap items off as you pack them.</p>
+    <span class="offline-note" id="offline-note">Autosave isn't available here — checks will reset on reload.</span>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Trip type"></nav>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2 id="panel-title"></h2>
+        <p class="subtitle" id="panel-subtitle"></p>
+      </div>
+      <div class="clear-wrap" id="clear-wrap"></div>
+    </div>
+
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <span class="progress-label" id="progress-label"></span>
+    </div>
+
+    <div id="sections"></div>
+  </section>
+</div>
+
+<script>
+const DATA = {
+  "city": {
+    "label": "City Trip",
+    "subtitle": "Short city visits by flight",
+    "sections": [
+      {
+        "heading": null,
+        "items": [
+          "Passport",
+          "Driving License + International",
+          "Sunglasses",
+          "Small towel fast drying",
+          "Toothbrush",
+          "Sun screen",
+          "Cap (baseball cap)",
+          "Walking socks",
+          "Woolen tights",
+          "Underwear | Boxer",
+          "Travel bag (side bag)",
+          "Bus card",
+          "Camera battery",
+          "Keys",
+          "SD card",
+          "Bankpas / Credit card",
+          "Phone charger",
+          "Emergency numbers",
+          "Shin Ramen + Pickled veggies.",
+          "Diaper",
+          "Baby’s: | Vaseline | Paracetamol | Gloves and Hat | Diaper | Maize finger | Otrijven | Vitamin D",
+          "Baby’s: Sudo cream | Sunscreen | Nose spray | Paracetamol | Swimming pants | Floaters | Hat",
+          "Binocular",
+          "Swimming pants",
+          "Camera Bag",
+          "Extra Socks",
+          "Cold bag (red)",
+          "Phone Charger",
+          "Band aid blisters"
+        ]
+      }
+    ]
+  },
+  "hike": {
+    "label": "Hike Trip",
+    "subtitle": "Short travel + hike",
+    "sections": [
+      {
+        "heading": null,
+        "items": [
+          "Spoon / Fork",
+          "UV labello stick",
+          "Hiking boots",
+          "Woolen cap",
+          "Gloves",
+          "Small towel fast drying",
+          "Slippers",
+          "Sun screen",
+          "Cap (baseball cap)",
+          "Soap (small bottle)",
+          "Walking socks",
+          "Woolen tights",
+          "Toothpaste (small)",
+          "Underwear",
+          "Tooth brush",
+          "Shirt with long sleeves",
+          "Toilet paper",
+          "Set of clean travelling clothes",
+          "Band aid blisters (Make a travel pack)",
+          "Sleeping bag",
+          "keys",
+          "Sleeping mat",
+          "Bankpas",
+          "Pillow (air filled)",
+          "Emergency numbers",
+          "Money",
+          "Telephone",
+          "Ticket",
+          "teabags",
+          "Passport",
+          "Credit card",
+          "Plastic garbage bags",
+          "Pocket knife",
+          "Lighter",
+          "Camera",
+          "Sunglasses",
+          "Mug (plastic Mugs + plates, car camping)",
+          "Water bottle small",
+          "Gas + Stove + water + Aluminum pot"
+        ]
+      }
+    ]
+  },
+  "camp": {
+    "label": "Camping",
+    "subtitle": "Camping with car",
+    "sections": [
+      {
+        "heading": "Gear",
+        "items": [
+          "Passport /ID card/ License",
+          "UV labello stick",
+          "Torch/headlight",
+          "Hiking boots",
+          "Woolen cap",
+          "Extra shoe laces",
+          "Gloves",
+          "Small towel fast drying",
+          "Rain protection rug sack",
+          "Slippers",
+          "Sun screen",
+          "Waterproof bags",
+          "Cap (baseball cap)",
+          "Soap (small bottle)",
+          "Tent",
+          "Walking socks",
+          "Rain coat / trousers",
+          "Lighter",
+          "Woolen tights",
+          "Toothpaste (small)",
+          "Sunglasses",
+          "Scarf to cover the head",
+          "Tooth brush",
+          "Water bottle small",
+          "Underwear",
+          "Toilet paper",
+          "Big water bottles (3-4)",
+          "Watch",
+          "Band aid blisters",
+          "Walking trousers (fast drying)",
+          "Shirt with long sleeves",
+          "Shirak (in two suitcase)",
+          "e-reader",
+          "Deodorant",
+          "Ground sheet",
+          "Memory card/ Camera",
+          "Set of clean travelling clothes",
+          "Tent stick (To create roof for cooking)",
+          "Shirts with short sleeves (fast drying)",
+          "Walking sticks",
+          "keys",
+          "Sleeping mat double bever",
+          "Sleeping bag",
+          "Bankpas / Credit card",
+          "Insect repellent",
+          "Sleeping mat",
+          "Emergency numbers",
+          "Eye mask",
+          "Pillow (air filled)",
+          "Telephone",
+          "Extra Lighter",
+          "Sheet bag",
+          "Batteries",
+          "Check doors and Windows if locked",
+          "Sitting mat",
+          "Nalgene water bag",
+          "Umbrella",
+          "Money / Bankpas / Credit card",
+          "Drone",
+          "Charge the power bank and battery",
+          "Ticket",
+          "Crocks",
+          "Running Shoe, shorts + T-shirt"
+        ]
+      },
+      {
+        "heading": "Food",
+        "items": [
+          "Extra cooking pot",
+          "Dish washing liquid",
+          "Eggs",
+          "Gas stove (buy stable one)",
+          "Plastic garbage bags",
+          "Chocolate (bars)",
+          "Shin Ramen + Noodles Pot (system)",
+          "Packet vegetables",
+          "Separate basket for dishes and cooking and washing, etc.",
+          "Cup-a-soup",
+          "Spoon / Fork"
+        ]
+      }
+    ]
+  }
+};
+
+const TAB_ORDER = ['city','hike','camp'];
+const TAB_ICON = { city:'\u2708\uFE0F', hike:'\uD83E\uDD7E', camp:'\uD83C\uDFD5\uFE0F' };
+const STORAGE_KEY = 'packing-checklist-checked-v1';
+
+let state = {};
+let activeTab = TAB_ORDER[0];
+let confirmingClear = false;
+const storageAvailable = (typeof window !== 'undefined') && !!window.storage;
+
+function itemId(tabKey, sIdx, iIdx){ return tabKey + '-' + sIdx + '-' + iIdx; }
+
+async function loadState(){
+  if(!storageAvailable) return {};
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    if(res && typeof res.value === 'string') return JSON.parse(res.value);
+    return {};
+  }catch(err){
+    return {};
+  }
+}
+
+async function persist(){
+  if(!storageAvailable) return;
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+  }catch(err){
+    console.error('checklist: could not save', err);
+  }
+}
+
+function counts(tabKey){
+  const tab = DATA[tabKey];
+  let total = 0, checked = 0;
+  tab.sections.forEach((sec, sIdx) => {
+    sec.items.forEach((_, iIdx) => {
+      total++;
+      if(state[itemId(tabKey, sIdx, iIdx)]) checked++;
+    });
+  });
+  return { checked, total };
+}
+
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function renderTabs(){
+  const nav = document.getElementById('tabs');
+  nav.innerHTML = '';
+  TAB_ORDER.forEach(key => {
+    const tab = DATA[key];
+    const { checked, total } = counts(key);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tab-btn' + (key === activeTab ? ' active' : '');
+    btn.setAttribute('role','tab');
+    btn.setAttribute('aria-selected', key === activeTab ? 'true' : 'false');
+    btn.innerHTML =
+      '<span aria-hidden="true">' + TAB_ICON[key] + '</span>' +
+      '<span>' + tab.label + '</span>' +
+      '<span class="tab-count">' + checked + '/' + total + '</span>';
+    btn.addEventListener('click', () => {
+      if(activeTab === key) return;
+      activeTab = key;
+      confirmingClear = false;
+      renderAll();
+    });
+    nav.appendChild(btn);
+  });
+}
+
+function renderProgress(){
+  const { checked, total } = counts(activeTab);
+  document.getElementById('progress-fill').style.width = (total ? (checked/total*100) : 0) + '%';
+  document.getElementById('progress-label').textContent = checked + ' of ' + total + ' packed';
+}
+
+function renderClearControl(){
+  const wrap = document.getElementById('clear-wrap');
+  wrap.innerHTML = '';
+  if(!confirmingClear){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-ghost';
+    btn.textContent = 'Clear this list';
+    btn.addEventListener('click', () => { confirmingClear = true; renderClearControl(); });
+    wrap.appendChild(btn);
+  } else {
+    const label = document.createElement('span');
+    label.className = 'progress-label';
+    label.textContent = 'Clear all checks?';
+    const yes = document.createElement('button');
+    yes.type = 'button'; yes.className = 'btn-danger'; yes.textContent = 'Yes, clear';
+    yes.addEventListener('click', async () => {
+      const tab = DATA[activeTab];
+      tab.sections.forEach((sec, sIdx) => sec.items.forEach((_, iIdx) => {
+        delete state[itemId(activeTab, sIdx, iIdx)];
+      }));
+      confirmingClear = false;
+      await persist();
+      renderAll();
+    });
+    const no = document.createElement('button');
+    no.type = 'button'; no.className = 'btn-ghost'; no.textContent = 'Cancel';
+    no.addEventListener('click', () => { confirmingClear = false; renderClearControl(); });
+    wrap.appendChild(label);
+    wrap.appendChild(yes);
+    wrap.appendChild(no);
+  }
+}
+
+function renderPanel(){
+  const tab = DATA[activeTab];
+  document.getElementById('panel-title').textContent = tab.label;
+  document.getElementById('panel-subtitle').textContent = tab.subtitle;
+  renderProgress();
+  renderClearControl();
+
+  const container = document.getElementById('sections');
+  container.innerHTML = '';
+  tab.sections.forEach((sec, sIdx) => {
+    if(sec.heading){
+      const h = document.createElement('div');
+      h.className = 'section-heading';
+      h.textContent = sec.heading;
+      container.appendChild(h);
+    }
+    const grid = document.createElement('div');
+    grid.className = 'items-grid';
+    sec.items.forEach((itemLabel, iIdx) => {
+      const id = itemId(activeTab, sIdx, iIdx);
+      const isChecked = !!state[id];
+      const row = document.createElement('label');
+      row.className = 'item';
+      row.innerHTML =
+        '<input type="checkbox" class="real-checkbox"' + (isChecked ? ' checked' : '') + '>' +
+        '<span class="box" aria-hidden="true"><span class="stamp">&#10003;</span></span>' +
+        '<span class="label">' + escapeHtml(itemLabel) + '</span>';
+      const input = row.querySelector('input');
+      input.addEventListener('change', async () => {
+        if(input.checked) state[id] = true; else delete state[id];
+        await persist();
+        renderTabs();
+        renderProgress();
+      });
+      grid.appendChild(row);
+    });
+    container.appendChild(grid);
+  });
+}
+
+function renderAll(){
+  renderTabs();
+  renderPanel();
+}
+
+renderAll();
+(async function init(){
+  state = await loadState();
+  if(!storageAvailable){
+    document.getElementById('offline-note').style.display = 'inline-block';
+  }
+  renderAll();
+})();
+</script>
+</body>
+</html>
